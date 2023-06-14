@@ -209,10 +209,6 @@ Posterior predictive checks, similar to prior predictive checks, generates fake 
 #Replicate results from simulations from the model
 y_rep <- posterior_predict(model, draws = 100)
 
-view(y_rep)
-
-as.matrix(data$Support)
-
 #Plot in comparison to the actual data
 ppc_dens_overlay(data$Support, y_rep[0:100, ])
 ```
