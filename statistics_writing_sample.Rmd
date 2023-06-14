@@ -13,6 +13,7 @@ library(tidyverse) #for additional graphing features
 library(retrodesign) #for calculating type S and type M errors
 library(rstan) #for the updated R-hat statistic in the monitor() function, not implemented
 library(boot) #for bootstrapping, not implemented
+library(loo)
 ```
 
 # Overview
@@ -148,6 +149,7 @@ I write a logit model with a normal prior around .6 to represent our beliefs tha
 
 ```{R}
 # Specify the model
+
 model <- stan_glm(
   formula = Support ~ Income + Age + Republican + Male,
   data = data,
@@ -155,9 +157,10 @@ model <- stan_glm(
   prior = normal(location = .6),
   chains = 4,
   iter = 2000,
-  weights = Male,
-  cores = 4
+  cores = 4,
+  refresh = 0
 )
+
 ```
 
 # 3: Convergence
@@ -190,30 +193,43 @@ mcmc_intervals(model)
 
 ## 4a: Cross validation
 
-Cross validation is a standard component of 
+Cross validation is a standard component of statistical inference. It involves leaving one or multiple members of a dataset out and repeating the analysis, essentially checking for robustness to outliers.
 
 ```{R}
-loo_predict(model)
+loo(model)
 ```
+
+Because all of our Pareto K diagnostics are below .7, the model passes the LOO cross validation test. 
 	
 ## 4b: Posterior predictive checks
 
 Posterior predictive checks, similar to prior predictive checks, generates fake data based on the posterior distribution and checks whether the posterior distribution from the test matches the posterior distribution from the simulations.
 
 ```{R}
-rstanarm::posterior_predict(model)
+#Replicate results from simulations from the model
+y_rep <- posterior_predict(model, draws = 100)
+
+view(y_rep)
+
+as.matrix(data$Support)
+
+#Plot in comparison to the actual data
+ppc_dens_overlay(data$Support, y_rep[0:100, ])
 ```
 
+Since we are generating our data from an admittedly sterile fake dataset, we see our posterior predictive check's density plot maps perfectly, indicating good model fit.
 
 ## 4c: Type S and Type M errors
 
-With an effect size of .10 and a standard deviation of .3, we find the following results from the retrodesign package's self-titled function that calculates the power of a test, the type S error, and the type M error.
+Type S orders specify the probability that the incorrect sign has been applied to our effect measurement and type M errors specify the factor by which the effet is exagerated. With an effect size of -.4 and a standard deviation of .2 for the effect of being male on support for the legislation, we find the following results from the retrodesign package's self-titled function that calculates the power of a test, the type S error, and the type M error.
 
 ```{R}
-retrodesign(A = .10, s = .02)
+summary(model)
+
+retrodesign(A = -0.4, s = 0.2)
 ```
 
-And from the output of the function above we see that with those inputs we have a power of 99%, a miniscule probability of a type S error and we are not likely to have an overinflated magnitude since our type M error is essentially 1.
+While the test itself remains theoretically very powerful the implementation of the retrodesign function shows a power of .51 when used to measure the effect size and standard deviation of the Male categorical variable. This low level of power shows that, while the survey replicated here might demonstrate a population-level effect, the survey is not large enough to distinguish the effects of specific covariates.
 
 # 5: Future Extensions
 
