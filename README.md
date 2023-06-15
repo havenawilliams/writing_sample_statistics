@@ -2,6 +2,7 @@
 A simple writing sample of a statistical workflow that includes multiple model building and evaluation techniques including:
 
 ∙Power analysis (including required sample size calculator for test power)
+
 ∙Fake data generation
 ∙Bayesian general linear model with custom priors
 ∙Summary statistics
